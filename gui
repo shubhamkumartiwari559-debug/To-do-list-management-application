@@ -1,0 +1,118 @@
+# Optional GUI version.
+# The CLI application in main.py is the primary submission entry point.
+
+import tkinter as tk
+from tkinter import messagebox
+import json
+import os
+
+DATA_FILE = "tasks.json"
+
+
+def load_tasks():
+    if not os.path.exists(DATA_FILE):
+        return []
+    try:
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return []
+
+
+def save_tasks(tasks):
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(tasks, f, indent=4)
+
+
+tasks = load_tasks()
+
+
+def refresh():
+    for widget in task_frame.winfo_children():
+        widget.destroy()
+
+    total = len(tasks)
+    completed = sum(t["completed"] for t in tasks)
+
+    stats.config(text=f"Total: {total}    Active: {total-completed}    Completed: {completed}")
+
+    for i, task in enumerate(tasks):
+        row = tk.Frame(task_frame, bg="#202124")
+        row.pack(fill="x", pady=4)
+
+        text = ("✓ " if task["completed"] else "○ ") + task["title"]
+        label = tk.Label(row, text=text, fg="white", bg="#202124",
+                         font=("Arial", 11), anchor="w")
+        label.pack(side="left", fill="x", expand=True, padx=10, pady=8)
+
+        tk.Button(
+            row,
+            text="Undo" if task["completed"] else "Done",
+            command=lambda i=i: toggle(i)
+        ).pack(side="right", padx=3)
+
+        tk.Button(
+            row,
+            text="Delete",
+            command=lambda i=i: delete(i)
+        ).pack(side="right", padx=3)
+
+
+def add():
+    title = entry.get().strip()
+    if not title:
+        messagebox.showwarning("Warning", "Enter a task first.")
+        return
+
+    tasks.append({
+        "title": title,
+        "priority": "Medium",
+        "due_date": "",
+        "completed": False
+    })
+    save_tasks(tasks)
+    entry.delete(0, tk.END)
+    refresh()
+
+
+def toggle(i):
+    tasks[i]["completed"] = not tasks[i]["completed"]
+    save_tasks(tasks)
+    refresh()
+
+
+def delete(i):
+    tasks.pop(i)
+    save_tasks(tasks)
+    refresh()
+
+
+root = tk.Tk()
+root.title("To Do List Management Application")
+root.geometry("700x550")
+root.configure(bg="#121212")
+
+tk.Label(
+    root,
+    text="To Do List Management Application",
+    font=("Arial", 20, "bold"),
+    fg="white",
+    bg="#121212"
+).pack(pady=20)
+
+top = tk.Frame(root, bg="#121212")
+top.pack(fill="x", padx=20)
+
+entry = tk.Entry(top, font=("Arial", 12))
+entry.pack(side="left", fill="x", expand=True, ipady=8)
+
+tk.Button(top, text="Add Task", command=add).pack(side="right", padx=8, ipady=5)
+
+stats = tk.Label(root, text="", fg="#bbbbbb", bg="#121212", font=("Arial", 10))
+stats.pack(pady=15)
+
+task_frame = tk.Frame(root, bg="#121212")
+task_frame.pack(fill="both", expand=True, padx=20)
+
+refresh()
+root.mainloop()
