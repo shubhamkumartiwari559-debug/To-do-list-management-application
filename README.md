@@ -197,7 +197,3 @@ Before submitting the repository:
 **SHUBHAM KUMAR TIWARI**
 
 Registration Number: **26BSA10048**
-
-## Academic Note
-
-This project is intended as an academic Python project. The student should understand the code, test it personally, and make any changes required by their instructor before submission.
