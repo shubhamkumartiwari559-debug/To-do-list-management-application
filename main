@@ -1,0 +1,223 @@
+import json
+import os
+from datetime import datetime
+
+DATA_FILE = "tasks.json"
+
+
+def load_tasks():
+    """Load tasks from the local JSON file."""
+    if not os.path.exists(DATA_FILE):
+        return []
+
+    try:
+        with open(DATA_FILE, "r", encoding="utf-8") as file:
+            data = json.load(file)
+            return data if isinstance(data, list) else []
+    except (json.JSONDecodeError, OSError):
+        print("Warning: Could not read tasks.json. Starting with an empty task list.")
+        return []
+
+
+def save_tasks(tasks):
+    """Save tasks to the local JSON file."""
+    with open(DATA_FILE, "w", encoding="utf-8") as file:
+        json.dump(tasks, file, indent=4)
+
+
+def get_priority():
+    while True:
+        print("\nPriority:")
+        print("1. Low")
+        print("2. Medium")
+        print("3. High")
+
+        choice = input("Choose priority [1-3]: ").strip()
+        priorities = {"1": "Low", "2": "Medium", "3": "High"}
+
+        if choice in priorities:
+            return priorities[choice]
+
+        print("Invalid choice. Please enter 1, 2, or 3.")
+
+
+def get_due_date():
+    while True:
+        due_date = input("Due date (DD-MM-YYYY, or press Enter to skip): ").strip()
+
+        if not due_date:
+            return ""
+
+        try:
+            datetime.strptime(due_date, "%d-%m-%Y")
+            return due_date
+        except ValueError:
+            print("Invalid date. Use DD-MM-YYYY.")
+
+
+def display_tasks(tasks, filter_name="all"):
+    """Display tasks according to the selected filter."""
+    filtered = []
+
+    for task in tasks:
+        if filter_name == "all":
+            filtered.append(task)
+        elif filter_name == "active" and not task["completed"]:
+            filtered.append(task)
+        elif filter_name == "completed" and task["completed"]:
+            filtered.append(task)
+
+    print("\n" + "=" * 70)
+    print(f"{'TASK LIST':^70}")
+    print("=" * 70)
+
+    if not filtered:
+        print("No tasks found.")
+        print("=" * 70)
+        return
+
+    for number, task in enumerate(filtered, start=1):
+        status = "X" if task["completed"] else " "
+        due = task["due_date"] if task["due_date"] else "No due date"
+
+        print(
+            f"{number}. [{status}] {task['title']}\n"
+            f"   Priority: {task['priority']} | Due: {due}"
+        )
+        print("-" * 70)
+
+    print("=" * 70)
+
+
+def add_task(tasks):
+    title = input("\nEnter task title: ").strip()
+
+    if not title:
+        print("Task title cannot be empty.")
+        return
+
+    priority = get_priority()
+    due_date = get_due_date()
+
+    task = {
+        "title": title,
+        "priority": priority,
+        "due_date": due_date,
+        "completed": False
+    }
+
+    tasks.append(task)
+    save_tasks(tasks)
+    print("Task added successfully.")
+
+
+def select_task(tasks, action):
+    if not tasks:
+        print("No tasks available.")
+        return None
+
+    display_tasks(tasks)
+
+    try:
+        number = int(input(f"Enter task number to {action}: "))
+        if 1 <= number <= len(tasks):
+            return number - 1
+    except ValueError:
+        pass
+
+    print("Invalid task number.")
+    return None
+
+
+def complete_task(tasks):
+    index = select_task(tasks, "complete/undo")
+
+    if index is None:
+        return
+
+    tasks[index]["completed"] = not tasks[index]["completed"]
+    save_tasks(tasks)
+
+    state = "completed" if tasks[index]["completed"] else "active"
+    print(f"Task is now {state}.")
+
+
+def delete_task(tasks):
+    index = select_task(tasks, "delete")
+
+    if index is None:
+        return
+
+    removed = tasks.pop(index)
+    save_tasks(tasks)
+    print(f"Deleted: {removed['title']}")
+
+
+def show_statistics(tasks):
+    total = len(tasks)
+    completed = sum(task["completed"] for task in tasks)
+    active = total - completed
+
+    print("\n===== STATISTICS =====")
+    print(f"Total tasks     : {total}")
+    print(f"Active tasks    : {active}")
+    print(f"Completed tasks : {completed}")
+
+
+def clear_completed(tasks):
+    original_count = len(tasks)
+    tasks[:] = [task for task in tasks if not task["completed"]]
+    removed = original_count - len(tasks)
+
+    save_tasks(tasks)
+    print(f"Removed {removed} completed task(s).")
+
+
+def show_menu():
+    print("\n" + "=" * 70)
+    print("              TO DO LIST MANAGEMENT APPLICATION")
+    print("=" * 70)
+    print("1. Add Task")
+    print("2. View All Tasks")
+    print("3. View Active Tasks")
+    print("4. View Completed Tasks")
+    print("5. Complete / Undo Task")
+    print("6. Delete Task")
+    print("7. Statistics")
+    print("8. Clear Completed Tasks")
+    print("9. Exit")
+    print("=" * 70)
+
+
+def main():
+    tasks = load_tasks()
+
+    while True:
+        show_menu()
+        choice = input("Enter your choice [1-9]: ").strip()
+
+        if choice == "1":
+            add_task(tasks)
+        elif choice == "2":
+            display_tasks(tasks, "all")
+        elif choice == "3":
+            display_tasks(tasks, "active")
+        elif choice == "4":
+            display_tasks(tasks, "completed")
+        elif choice == "5":
+            complete_task(tasks)
+        elif choice == "6":
+            delete_task(tasks)
+        elif choice == "7":
+            show_statistics(tasks)
+        elif choice == "8":
+            clear_completed(tasks)
+        elif choice == "9":
+            print("Thank you for using the To Do List Management Application.")
+            break
+        else:
+            print("Invalid choice. Please select 1-9.")
+
+
+if __name__ == "__main__":
+    main()
